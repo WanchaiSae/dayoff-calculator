@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>เว็บแอพผลัดลา</title>
+    <!-- Include Flatpickr for date picking -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <!-- Include FullCalendar for calendar display -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+
+    <!-- CSS -->
+    <style>
+      body {
+        background-color: lightblue;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin: 0;
+        padding: 20px;
+      }
+
+      .container {
+        background-color: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        max-width: 600px;
+        width: 100%;
+      }
+
+      .text-center {
+        text-align: center;
+      }
+
+      .form-group {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+      }
+
+      .form-group label {
+        width: 450px;
+        font-weight: bold;
+      }
+
+      .form-group input {
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        width: 200px;
+      }
+
+      button {
+        background-color: lightblue;
+        padding: 10px 20px;
+        font-size: 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        width: 100%;
+        margin-bottom: 20px;
+        font-weight: bold;
+      }
+
+      button:hover {
+        opacity: 0.8;
+      }
+
+      #result {
+        margin-bottom: 20px;
+        color: #333;
+      }
+
+      #calendar {
+        max-width: 100%;
+        background-color: #e0f7fa;
+        padding: 10px;
+        border-radius: 4px;
+      }
+
+      /* Custom styles for shift colors */
+      .shift-0 {
+        background-color: lightpink !important;
+        color: white !important;
+      }
+      .shift-1 {
+        background-color: rgb(221, 187, 124) !important;
+        color: white !important;
+      }
+      .shift-2 {
+        background-color: rgb(142, 8, 101) !important;
+        color: black !important;
+      }
+      .shift-3 {
+        background-color: rgb(166, 240, 166) !important;
+        color: white !important;
+      }
+      .shift-4 {
+        background-color: rgb(172, 172, 243) !important;
+        color: white !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2 class="text-center">เว็บแอพผลัดลา</h2>
+      <div class="form-group">
+        <label for="start-date">เลือกวันที่ปล่อยพลัดลา:</label>
+        <input
+          type="text"
+          id="start-date"
+          placeholder="เลือกวันที่ปล่อยพลัดลา"
+        />
+      </div>
+      <div class="form-group">
+        <label for="end-date">เลือกวันที่ต้องการจะสิ้นสุด:</label>
+        <input
+          type="text"
+          id="end-date"
+          placeholder="เลือกวันที่ต้องการจะสิ้นสุด"
+        />
+      </div>
+      <button onclick="submit()">ตกลง</button>
+
+      <div id="result"></div>
+      <div id="calendar"></div>
+    </div>
+  </body>
+</html>
+<script>
+  // Initialize date picker
+  flatpickr("#start-date", {
+    dateFormat: "Y-m-d",
+    defaultDate: new Date(),
+  });
+  flatpickr("#end-date", {
+    dateFormat: "Y-m-d",
+    defaultDate: new Date(),
+  });
+
+  // Initialize Calendar
+  document.addEventListener("DOMContentLoaded", function () {
+    var calendarEl = document.getElementById("calendar");
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+      initialView: "dayGridMonth",
+      events: [],
+      eventDisplay: "block",
+      headerToolbar: {
+        left: "prev,next today",
+        center: "title",
+        right: "dayGridMonth",
+      },
+    });
+    calendar.render();
+    window.calendar = calendar; // Make calendar accessible globally
+  });
+
+  // sumbit
+  async function submit() {
+    const startDateStr = document.getElementById("start-date").value;
+    const endDateStr = document.getElementById("end-date").value;
+
+    try {
+      // send request to server
+      const response = await fetch("http://localhost:5000/calculate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ startDate: startDateStr, endDate: endDateStr }),
+      });
+
+      // response
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+
+      const { dateDict, startDate, endDate } = await response.json();
+
+      // Display result
+      // document.getElementById(
+      //   "result"
+      // ).innerText = `สีชมพูผลัด1 สีส้มผลัด2 สีม่วงผลัด3 สีเขียวผลัด4 สีน้ำเงินผลัด5`;
+
+      // Clear existing events
+      window.calendar.getEvents().forEach((event) => event.remove());
+
+      // Add new events
+      for (const [date, shiftValue] of Object.entries(dateDict)) {
+        window.calendar.addEvent({
+          title: `ผลัด ${shiftValue + 1}`,
+          start: date,
+          classNames: [`shift-${shiftValue}`],
+        });
+      }
+    } catch (error) {
+      document.getElementById("result").innerText =
+        "Invalid date format or server error. Use yyy-mm-dd for dates.";
+      console.error(error);
+    }
+  }
+</script>
